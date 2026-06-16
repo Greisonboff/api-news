@@ -7,7 +7,6 @@ export async function tavilyGet(prompt: string) {
       apiKey: process.env.IA_TOKEN_TAVILY,
     });
 
-    throw new Error("error");
     const response = await client.search(prompt, {
       includeAnswer: "basic",
       topic: "news",
