@@ -45,7 +45,7 @@ Para iniciar o servidor em modo de desenvolvimento com hot-reload:
 npm run dev
 ```
 
-O servidor estará disponível, por padrão, em `http://localhost:3000`.
+O servidor estará disponível, por padrão, em `http://localhost:3030`.
 
 ## 📂 Estrutura de Pastas (Resumo)
 
