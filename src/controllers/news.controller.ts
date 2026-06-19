@@ -1,15 +1,27 @@
+import { FastifyRequest, FastifyReply } from "fastify";
 import { tavilyGet, huggingface } from "../services/ia";
 import { wired } from "../services/search-feed/wired";
 import { News } from "../types/news";
 
-export default async function getNews(): Promise<News> {
+type NewsQuery = {
+  limit?: number;
+};
+
+export default async function getNews(
+  request: FastifyRequest<{
+    Querystring: NewsQuery;
+  }>,
+  reply: FastifyReply,
+): Promise<News> {
   try {
+    const { limit = 1 } = request.query;
+
     const prompt = `Você é especialista em tecnologia. Retorne apenas 1 tema de tecnologia mais relevante da semana atual. Responda somente com JSON válido, sem markdown ou texto extra. Use português do Brasil, informações reais e atuais e uma URL de imagem válida.
 
 {"week_reference":"YYYY-MM-DD","topic":{"title":"Até 30 caracteres","description":"Resumo","image":"https://imagem.jpg"}}`;
 
     const providers = [
-      () => tavilyGet(prompt),
+      () => tavilyGet(prompt, limit),
       () => huggingface(prompt),
       () => wired(),
     ];

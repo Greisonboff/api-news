@@ -1,7 +1,7 @@
 import { tavily } from "@tavily/core";
 import { Provider } from "../../../types/news";
 
-export async function tavilyGet(prompt: string) {
+export async function tavilyGet(prompt: string, limit: number) {
   try {
     const client = tavily({
       apiKey: process.env.IA_TOKEN_TAVILY,
@@ -11,7 +11,7 @@ export async function tavilyGet(prompt: string) {
       includeAnswer: "basic",
       topic: "news",
       searchDepth: "basic",
-      maxResults: 1,
+      maxResults: limit,
       timeRange: "week",
       includeUsage: true,
       includeRawContent: "text",

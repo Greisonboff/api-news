@@ -1,10 +1,13 @@
 import fastify, { FastifyInstance } from "fastify";
 import news from "./routes/news";
 import "dotenv/config";
+import auth from "./middleware/auth";
 
 const app: FastifyInstance = fastify({
   logger: true,
 });
+
+app.addHook("preHandler", auth);
 
 app.get("/", async (request, reply) => {
   return {
