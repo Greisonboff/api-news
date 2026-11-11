@@ -1,182 +1,135 @@
 # 📰 API Notícias
 
-Uma API moderna e minimalista construída com **Fastify** e **TypeScript** para agregação de notícias e processamento inteligente de dados utilizando IA.
+API minimalista construída com **Fastify** e **TypeScript** que agrega notícias de tecnologia a partir de múltiplas fontes, com fallback automático entre elas.
 
 ## ✨ Funcionalidades
 
-- **Busca de Notícias (RSS):** Integração nativa com feeds RSS (ex: Wired) para captura de manchetes em tempo real.
-- **Inteligência Artificial:** Processamento de tópicos e análise de conteúdo via Hugging Face (Llama 3).
-- **Autenticação:** Proteção de rotas utilizando API Key.
-- **Validação Automática:** Query params validados pelo Fastify através do AJV.
-- **Alta Performance:** Estruturada sobre o Fastify para garantir baixa latência.
-- **Desenvolvimento Moderno:** Totalmente tipada com TypeScript e execução ágil com `tsx`.
+- **Busca de notícias com fallback:** tenta a [Tavily](https://tavily.com) (busca de notícias da semana) e, se falhar, usa o feed RSS da Wired.
+- **Notícias variadas:** cada consulta busca dados ao vivo (sem cache) e sorteia `limit` notícias de um conjunto maior, então consultas repetidas trazem notícias diferentes. O conteúdo das notícias é em inglês.
+- **Formato único de resposta:** todas as fontes retornam a mesma lista de artigos.
+- **Autenticação:** rota `/news` protegida por API Key (header `x-api-key`).
+- **Rate limit:** 30 requisições por minuto por IP.
+- **Validação:** query params e respostas validados por JSON Schema do Fastify.
 
 ## 🚀 Tecnologias
 
-- Node.js
-- TypeScript
-- Fastify
-- AJV
-- Hugging Face SDK
-- Fast XML Parser
+- Node.js + TypeScript
+- Fastify + @fastify/rate-limit
+- @tavily/core
+- fast-xml-parser
 - dotenv
-- tsx
+- tsx (desenvolvimento) e Vitest (testes)
 
 ## 📦 Instalação
-
-### Clone o projeto
 
 ```bash
 git clone <seu-repositorio-url>
 cd api-noticias
-```
-
-### Instale as dependências
-
-```bash
 npm install
 ```
 
-### Configure as variáveis de ambiente
+### Variáveis de ambiente
 
-Crie um arquivo `.env` na raiz do projeto.
+Crie um arquivo `.env` na raiz do projeto:
 
 ```env
+# Obrigatórias
+API_KEY_AUTH=sua_api_key
+IA_TOKEN_TAVILY=seu_token_tavily
+
+# Opcional (padrão: 3030)
 PORT=3030
-
-API_KEY=sua_api_key
-
-IA_TOKEN_HUGGINFACE=seu_token
-
-IA_TOKEN_TAVILY=seu_token
-
 ```
 
-## 🛠️ Executando
+A aplicação não inicia se `API_KEY_AUTH` ou `IA_TOKEN_TAVILY` estiverem ausentes.
 
-Modo desenvolvimento:
+## 🛠️ Scripts
 
-```bash
-npm run dev
-```
+| Comando             | Descrição                                   |
+| ------------------- | ------------------------------------------- |
+| `npm run dev`       | Desenvolvimento com hot reload              |
+| `npm run build`     | Compila para `dist/`                        |
+| `npm start`         | Executa a versão compilada                  |
+| `npm run typecheck` | Checagem de tipos                           |
+| `npm test`          | Testes (Vitest, sem chamadas externas)      |
 
-Build:
-
-```bash
-npm run build
-```
-
-Produção:
-
-```bash
-npm run start
-```
-
-Por padrão a API estará disponível em:
-
-```bash
-http://localhost:3030
-```
-
----
-
-## 🔐 Autenticação
-
-Todas as rotas protegidas exigem uma API Key.
-
-Exemplo de requisição:
-
-```http
-GET /news
-```
-
-Headers:
-
-```http
-x-api-key: sua_api_key
-```
-
-Exemplo utilizando curl:
-
-```bash
-curl http://localhost:3030/news \
--H "x-api-key: sua_api_key"
-```
-
----
+Por padrão a API fica disponível em `http://localhost:3030`.
 
 ## 📚 Endpoints
 
-### Buscar notícias
+### `GET /health`
 
-```http
-GET /news
+Pública. Retorna `200` com `{ "message": "API funcionando!" }`.
+
+### `GET /news`
+
+Requer o header `x-api-key`.
+
+| Parâmetro | Tipo    | Obrigatório | Descrição                                  |
+| --------- | ------- | ----------- | ------------------------------------------ |
+| limit     | inteiro | Não         | Quantidade de notícias (1 a 10, padrão: 1) |
+
+```bash
+curl "http://localhost:3030/news?limit=3" -H "x-api-key: sua_api_key"
 ```
 
-### Query Params
+### Respostas
 
-| Parâmetro | Tipo   | Obrigatório | Descrição                                |
-| --------- | ------ | ----------- | ---------------------------------------- |
-| limit     | number | Não         | Quantidade máxima de notícias retornadas |
+| Status | Quando                                         |
+| ------ | ---------------------------------------------- |
+| 200    | Notícias encontradas                           |
+| 400    | `limit` inválido                               |
+| 401    | API Key ausente ou inválida                    |
+| 429    | Limite de requisições excedido                 |
+| 502    | Nenhuma fonte de notícias respondeu            |
+| 500    | Erro interno                                   |
 
-Exemplo:
+Exemplo de sucesso:
 
-```http
-GET /news?limit=5
+```json
+{
+  "success": true,
+  "provider": "tavily",
+  "message": "sucesso ao buscar notícias",
+  "data": [
+    {
+      "title": "Título da notícia",
+      "content": "Resumo da notícia...",
+      "url": "https://site.com/noticia",
+      "image": "https://site.com/imagem.jpg",
+      "publishedDate": "Mon, 09 Nov 2026 22:40:10 +0000",
+      "source": "tavily"
+    }
+  ]
+}
 ```
 
-Limites suportados:
+`url`, `image` e `publishedDate` são opcionais. `provider` indica qual fonte respondeu (`tavily` ou `wired`).
 
-- mínimo: 1
-- máximo: 10
-- padrão: 1
+Exemplo de falha (`502`):
 
----
+```json
+{
+  "success": false,
+  "provider": null,
+  "message": "erro ao buscar notícias",
+  "data": null
+}
+```
 
 ## 📂 Estrutura do Projeto
 
 ```text
 src/
-├── controllers/
-│   └── news.controller.ts
-│
-├── middleware/
-│   └── auth.ts
-│
-├── routes/
-│   └── news.ts
-│
+├── app.ts                  # Cria a instância Fastify (plugins e rotas)
+├── server.ts               # Carrega o .env e inicia o servidor
+├── config/env.ts           # Leitura e validação das variáveis de ambiente
+├── controllers/            # Cadeia de fallback entre fontes
+├── middleware/auth.ts      # Validação da API Key
+├── routes/news.ts          # Rota /news e schemas
 ├── services/
-│   ├── ia/
-│   │   └── huggingface/
-│   │
-│   └── search-feed/
-│       └── wired/
-│
-├── types/
-│
-└── server.ts
-```
-
-### Responsabilidades
-
-| Pasta       | Responsabilidade                |
-| ----------- | ------------------------------- |
-| controllers | Manipulação das requisições     |
-| middleware  | Autenticação e interceptadores  |
-| routes      | Definição dos endpoints         |
-| services    | Regras de negócio e integrações |
-| types       | Tipos compartilhados            |
-| server.ts   | Inicialização da aplicação      |
-
-## 🧪 Exemplo de Resposta
-
-```json
-[
-  {
-    "title": "Nova IA anunciada",
-    "description": "Resumo da notícia...",
-    "url": "https://site.com/noticia"
-  }
-]
+│   ├── ia/providers/tavily.ts
+│   └── search-feed/wired/
+└── types/news.ts           # Tipos compartilhados
+test/                       # Testes Vitest
 ```

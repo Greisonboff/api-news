@@ -1,5 +1,4 @@
 enum Provider {
-  HUGGINGFACE = "huggingface",
   TAVILY = "tavily",
   WIRED = "wired",
 }
@@ -8,17 +7,24 @@ interface Article {
   title: string;
   content: string;
   url?: string;
-  rawContent?: string;
-  publishedDate?: string;
-  score?: number;
   image?: string;
+  publishedDate?: string;
+  source?: Provider;
+}
+
+interface ProviderResult {
+  success: boolean;
+  provider: Provider;
+  message: string;
+  data?: Article[];
+  error?: unknown;
 }
 
 interface News {
-  sucess: boolean;
+  success: boolean;
   provider: Provider | null;
   message: string;
-  data: [Article] | any;
+  data: Article[] | null;
 }
 
-export { Provider, Article, News };
+export { Provider, Article, ProviderResult, News };

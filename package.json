@@ -2,25 +2,29 @@
   "name": "api-noticias",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@tavily/core": "^0.7.6",
+    "@fastify/rate-limit": "^11.2.2",
+    "@tavily/core": "^1.0.0",
     "dotenv": "^17.4.2",
     "fast-xml-parser": "^5.9.0",
-    "fastify": "^5.8.5"
+    "fastify": "^5.12.8"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
-    "tsconfig-paths": "^4.2.0",
     "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0"
   }
 }
