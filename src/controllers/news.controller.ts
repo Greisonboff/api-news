@@ -1,11 +1,16 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { tavilyGet, huggingface } from "../services/ia";
+import { tavilySearch } from "../services/ia";
 import { wired } from "../services/search-feed/wired";
-import { News } from "../types/news";
+import { News, ProviderResult } from "../types/news";
 
 type NewsQuery = {
-  limit?: number;
+  limit: number;
 };
+
+const providers: Array<(limit: number) => Promise<ProviderResult>> = [
+  tavilySearch,
+  wired,
+];
 
 export default async function getNews(
   request: FastifyRequest<{
@@ -13,48 +18,40 @@ export default async function getNews(
   }>,
   reply: FastifyReply,
 ): Promise<News> {
+  const { limit } = request.query;
+
   try {
-    const { limit = 1 } = request.query;
-
-    const prompt = `Você é especialista em tecnologia. Retorne apenas 1 tema de tecnologia mais relevante da semana atual. Responda somente com JSON válido, sem markdown ou texto extra. Use português do Brasil, informações reais e atuais e uma URL de imagem válida.
-
-{"week_reference":"YYYY-MM-DD","topic":{"title":"Até 30 caracteres","description":"Resumo","image":"https://imagem.jpg"}}`;
-
-    const providers = [
-      () => tavilyGet(prompt, limit),
-      () => huggingface(prompt),
-      () => wired(),
-    ];
-
-    let response = null;
-
     for (const provider of providers) {
-      response = await provider();
+      const result = await provider(limit);
 
-      if (response?.success) {
-        break;
+      if (result.success && result.data?.length) {
+        return {
+          success: true,
+          provider: result.provider,
+          message: "sucesso ao buscar notícias",
+          data: result.data,
+        };
       }
+
+      request.log.warn(
+        { provider: result.provider, err: result.error },
+        result.message,
+      );
     }
 
-    if (!response?.success) {
-      return {
-        sucess: false,
-        provider: null,
-        message: "erro ao buscar notícias",
-        data: null,
-      };
-    }
-
+    reply.code(502);
     return {
-      sucess: true,
-      provider: response.provider,
-      message: "sucesso ao buscar notícias",
-      data: response.data,
+      success: false,
+      provider: null,
+      message: "erro ao buscar notícias",
+      data: null,
     };
   } catch (error) {
-    console.error("erro ao buscar notícias:", error);
+    request.log.error({ err: error }, "erro ao buscar notícias");
+
+    reply.code(500);
     return {
-      sucess: false,
+      success: false,
       provider: null,
       message: "internal server error",
       data: null,

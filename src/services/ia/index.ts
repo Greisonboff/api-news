@@ -1,4 +1,3 @@
-import { tavilyGet } from "./providers/tavily";
-import { huggingface } from "./providers/huggingface";
+import { tavilySearch } from "./providers/tavily";
 
-export { tavilyGet, huggingface };
+export { tavilySearch };

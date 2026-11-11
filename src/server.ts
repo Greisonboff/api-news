@@ -1,26 +1,22 @@
-import fastify, { FastifyInstance } from "fastify";
-import news from "./routes/news";
 import "dotenv/config";
-import auth from "./middleware/auth";
-
-const app: FastifyInstance = fastify({
-  logger: true,
-});
-
-app.addHook("preHandler", auth);
-
-app.get("/", async (request, reply) => {
-  return {
-    message: "API funcionando!",
-  };
-});
-
-app.register(news);
+import { env } from "./config/env";
+import { buildApp } from "./app";
 
 const start = async () => {
+  const app = await buildApp();
+
+  const shutdown = async (signal: string) => {
+    app.log.info(`${signal} recebido, encerrando servidor`);
+    await app.close();
+    process.exit(0);
+  };
+
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
+
   try {
     await app.listen({
-      port: 3030,
+      port: env.PORT,
       host: "0.0.0.0",
     });
   } catch (err) {
